@@ -54,7 +54,7 @@ func (*GoogleCloudStorage) NewBackend(URL url.URL) (knoxite.Backend, error) {
 	}
 
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialsPath))
+	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialsPath), option.WithScopes(storage.ScopeFullControl))
 	if err != nil {
 		return &GoogleCloudStorage{}, err
 	}
