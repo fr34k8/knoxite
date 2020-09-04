@@ -80,7 +80,7 @@ func executeRestore(snapshotID, target string, opts RestoreOptions) error {
 			return ferr
 		}
 
-		progress, derr := knoxite.DecodeSnapshot(repository, snapshot, target, opts.Excludes)
+		progress, derr := knoxite.DecodeSnapshot(repository, snapshot, target, opts.Excludes, opts.Ongoing)
 		if derr != nil {
 			return derr
 		}
