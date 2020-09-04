@@ -58,6 +58,9 @@ func TestAESBackendLoad(t *testing.T) {
 	if !reflect.DeepEqual(repo.RestoreExcludes, excludes) {
 		t.Errorf("Restore Excludes did not match:\nExpected: %v\nGot: %v", excludes, repo.RestoreExcludes)
 	}
+	if !repo.Ongoing {
+		t.Errorf("Expected true for ongoing operations, got: %v", repo.Ongoing)
+	}
 
 	// try to load the config with a wrong password
 	u = &url.URL{
