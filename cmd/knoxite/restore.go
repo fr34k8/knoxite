@@ -74,63 +74,62 @@ func init() {
 
 func executeRestore(snapshotID, target string, opts RestoreOptions) error {
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
-	if err == nil {
-		_, snapshot, ferr := repository.FindSnapshot(snapshotID)
-		if ferr != nil {
-			return ferr
-		}
-
-		progress, derr := knoxite.DecodeSnapshot(repository, snapshot, target, opts.Excludes, opts.Ongoing)
-		if derr != nil {
-			return derr
-		}
-
-		pb := &goprogressbar.ProgressBar{Total: 1000, Width: 40}
-		stats := knoxite.Stats{}
-		lastPath := ""
-
-		errs := make(map[string]error)
-		for p := range progress {
-			if p.Error != nil {
-				if restoreOpts.Ongoing {
-					errs[p.Path] = p.Error
-					stats.Errors += 1
-				} else {
-					fmt.Println()
-					return p.Error
-				}
-			}
-
-			pb.Total = int64(p.CurrentItemStats.Size)
-			pb.Current = int64(p.CurrentItemStats.Transferred)
-			pb.PrependText = fmt.Sprintf("%s / %s  %s/s",
-				knoxite.SizeToString(uint64(pb.Current)),
-				knoxite.SizeToString(uint64(pb.Total)),
-				knoxite.SizeToString(p.TransferSpeed()))
-
-			if p.Path != lastPath {
-				// We have just started restoring a new item
-				if len(lastPath) > 0 {
-					fmt.Println()
-				}
-				lastPath = p.Path
-				pb.Text = p.Path
-			}
-			if p.CurrentItemStats.Size == p.CurrentItemStats.Transferred {
-				// We have just finished restoring an item
-				stats.Add(p.TotalStatistics)
-			}
-
-			pb.LazyPrint()
-		}
-		fmt.Println()
-		fmt.Println("Restore done:", stats.String())
-		for file, err := range errs {
-			fmt.Printf("'%s' failed to restore: %v\n", file, err)
-		}
-
-		return nil
+	if err != nil {
+		return err
+	}
+	_, snapshot, ferr := repository.FindSnapshot(snapshotID)
+	if ferr != nil {
+		return ferr
 	}
 
-	return err
+	progress, derr := knoxite.DecodeSnapshot(repository, snapshot, target, opts.Excludes, opts.Ongoing)
+	if derr != nil {
+		return derr
+	}
+
+	pb := &goprogressbar.ProgressBar{Total: 1000, Width: 40}
+	stats := knoxite.Stats{}
+	lastPath := ""
+
+	errs := make(map[string]error)
+	for p := range progress {
+		if p.Error != nil {
+			if restoreOpts.Ongoing {
+				errs[p.Path] = p.Error
+				stats.Errors += 1
+			} else {
+				fmt.Println()
+				return p.Error
+			}
+		}
+
+		pb.Total = int64(p.CurrentItemStats.Size)
+		pb.Current = int64(p.CurrentItemStats.Transferred)
+		pb.PrependText = fmt.Sprintf("%s / %s  %s/s",
+			knoxite.SizeToString(uint64(pb.Current)),
+			knoxite.SizeToString(uint64(pb.Total)),
+			knoxite.SizeToString(p.TransferSpeed()))
+
+		if p.Path != lastPath {
+			// We have just started restoring a new item
+			if len(lastPath) > 0 {
+				fmt.Println()
+			}
+			lastPath = p.Path
+			pb.Text = p.Path
+		}
+		if p.CurrentItemStats.Size == p.CurrentItemStats.Transferred {
+			// We have just finished restoring an item
+			stats.Add(p.TotalStatistics)
+		}
+
+		pb.LazyPrint()
+	}
+	fmt.Println()
+	fmt.Println("Restore done:", stats.String())
+	for file, err := range errs {
+		fmt.Printf("'%s' failed to restore: %v\n", file, err)
+	}
+
+	return nil
 }
