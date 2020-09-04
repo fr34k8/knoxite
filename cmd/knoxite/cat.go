@@ -35,22 +35,35 @@ func init() {
 }
 
 func executeCat(snapshotID string, file string) error {
+	logger.Log(Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, "Opened repository")
+
+	logger.Log(Info, "Finding snapshot "+snapshotID)
 	_, snapshot, ferr := repository.FindSnapshot(snapshotID)
 	if ferr != nil {
 		return ferr
 	}
+	logger.Log(Info, "Found snapshot "+snapshot.Description)
 
+	logger.Log(Info, "Reading snapshot "+snapshotID)
 	if archive, ok := snapshot.Archives[file]; ok {
+		logger.Log(Info, "Found and read archive from location "+archive.Path)
+
+		logger.Log(Info, "Decoding archive data")
 		b, _, erra := knoxite.DecodeArchiveData(repository, *archive)
 		if erra != nil {
 			return erra
 		}
+		logger.Log(Info, "Decoded archive data")
 
+		logger.Log(Info, "Output file content")
 		_, err = os.Stdout.Write(b)
+
+		logger.Log(Info, "Cat command finished successfully.")
 		return err
 	}
 
