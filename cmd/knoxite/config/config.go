@@ -35,6 +35,7 @@ type RepoConfig struct {
 	Compression     string   `json:"compression"`
 	Tolerance       uint     `json:"tolerance"`
 	Encryption      string   `json:"encryption"`
+	Ongoing         bool     `json:"ongoing"`
 	StoreExcludes   []string `json:"store_excludes"`
 	RestoreExcludes []string `json:"restore_excludes"`
 }
