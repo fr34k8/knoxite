@@ -87,7 +87,7 @@ func (snapshot *Snapshot) gatherTargetInformation(cwd string, paths []string, ex
 }
 
 // Add adds a path to a Snapshot.
-func (snapshot *Snapshot) Add(cwd string, paths []string, excludes []string, repository Repository, chunkIndex *ChunkIndex, compress, encrypt uint16, dataParts, parityParts uint) chan Progress {
+func (snapshot *Snapshot) Add(cwd string, paths []string, excludes []string, repository Repository, chunkIndex *ChunkIndex, compress, encrypt uint16, dataParts, parityParts uint, continuously bool) chan Progress {
 	progress := make(chan Progress)
 	fwd := make(chan ArchiveResult)
 
@@ -97,7 +97,11 @@ func (snapshot *Snapshot) Add(cwd string, paths []string, excludes []string, rep
 		for result := range fwd {
 			if result.Error != nil {
 				p := newProgressError(result.Error)
+				p.Path = result.Archive.Path
 				progress <- p
+				if continuously {
+					continue
+				}
 				break
 			}
 
@@ -125,7 +129,11 @@ func (snapshot *Snapshot) Add(cwd string, paths []string, excludes []string, rep
 						continue
 					}
 					p = newProgressError(err)
+					p.Path = archive.Path
 					progress <- p
+					if continuously {
+						continue
+					}
 					break
 				}
 				archive.Encrypted = encrypt
@@ -134,7 +142,11 @@ func (snapshot *Snapshot) Add(cwd string, paths []string, excludes []string, rep
 				for cd := range chunkchan {
 					if cd.Error != nil {
 						p = newProgressError(err)
+						p.Path = archive.Path
 						progress <- p
+						if continuously {
+							continue
+						}
 						close(progress)
 						return
 					}
@@ -145,7 +157,11 @@ func (snapshot *Snapshot) Add(cwd string, paths []string, excludes []string, rep
 					n, err := repository.backend.StoreChunk(chunk)
 					if err != nil {
 						p = newProgressError(err)
+						p.Path = archive.Path
 						progress <- p
+						if continuously {
+							continue
+						}
 						close(progress)
 						return
 					}

@@ -121,7 +121,7 @@ func store(repository *knoxite.Repository, chunkIndex *knoxite.ChunkIndex, snaps
 	startTime := time.Now()
 	progress := snapshot.Add(wd, targets, opts.Excludes, *repository, chunkIndex,
 		compression, encryption,
-		tol, opts.FailureTolerance)
+		tol, opts.FailureTolerance, opts.Ongoing)
 
 	fileProgressBar := &goprogressbar.ProgressBar{Width: 40}
 	overallProgressBar := &goprogressbar.ProgressBar{
