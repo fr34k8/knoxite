@@ -5,12 +5,10 @@
  *   For license see LICENSE
  */
 
-package main
+package knoxite
 
 import (
 	"fmt"
-
-	"github.com/knoxite/knoxite"
 )
 
 type Logger struct {
@@ -19,25 +17,25 @@ type Logger struct {
 
 var (
 	logger Logger
-	printV = func(verbosity knoxite.Verbosity, s string) {
+	printV = func(verbosity Verbosity, s string) {
 		fmt.Println(verbosity.String() + ": " + s)
 	}
 )
 
-func (l *Logger) Log(verbosity knoxite.Verbosity, s string) {
+func (l *Logger) Log(verbosity Verbosity, s string) {
 	switch verbosity {
-	case knoxite.Debug:
-		if l.VerbosityLevel == knoxite.Debug {
+	case Debug:
+		if l.VerbosityLevel == Debug {
 			printV(verbosity, s)
 		}
 		fallthrough
-	case knoxite.Info:
-		if l.VerbosityLevel == knoxite.Info {
+	case Info:
+		if l.VerbosityLevel == Info {
 			printV(verbosity, s)
 		}
 		fallthrough
-	case knoxite.Warning:
-		if l.VerbosityLevel == knoxite.Warning {
+	case Warning:
+		if l.VerbosityLevel == Warning {
 			printV(verbosity, s)
 		}
 	}

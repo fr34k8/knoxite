@@ -18,6 +18,7 @@ import (
 	shutdown "github.com/klauspost/shutdown2"
 	"github.com/spf13/cobra"
 
+	"github.com/knoxite/knoxite"
 	"github.com/knoxite/knoxite/cmd/knoxite/config"
 	"github.com/knoxite/knoxite/cmd/knoxite/utils"
 	_ "github.com/knoxite/knoxite/storage/azure"
@@ -56,6 +57,8 @@ var (
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
+
+	logger knoxite.Logger
 )
 
 func main() {
