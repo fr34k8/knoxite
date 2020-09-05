@@ -104,20 +104,27 @@ func initLogger() {
 // ConfigURL flag.
 func initConfig() {
 	var err error
+	logger.Log(knoxite.Info, "Initialising config with ConfigURL")
 	cfg, err = config.New(globalOpts.ConfigURL)
 	if err != nil {
 		log.Fatalf("error reading the config file: %v\n", err)
 		return
 	}
+	logger.Log(knoxite.Info, "Initialised config")
+
+	logger.Log(knoxite.Info, "Loading config")
 	if err = cfg.Load(); err != nil {
 		log.Fatalf("error loading the config file: %v\n", err)
 		return
 	}
+	logger.Log(knoxite.Info, "Loaded config")
 
-	// There can occur a panic due to an entry assigment in nil map when theres
-	// no map initialized to store the RepoConfigs. This will prevent this from
-	// happening:
 	if cfg.Repositories == nil {
+		logger.Log(knoxite.Warning, "There can occur a panic due to an entry"+
+			"assigment in nil map when there's no map initialized.\n"+
+			"Initialising empty map with default values instead.")
+
+		//  This will prevent this from happening:
 		cfg.Repositories = make(map[string]config.RepoConfig)
 	}
 }
