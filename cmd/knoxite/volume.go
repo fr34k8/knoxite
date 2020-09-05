@@ -39,7 +39,15 @@ var (
 			if len(args) != 1 {
 				return fmt.Errorf("init needs a name for the new volume")
 			}
-			return executeVolumeInit(args[0], volumeInitOpts.Description)
+
+			logger.Log(knoxite.Info, fmt.Sprintf("Initializing volume %s", volumeInitOpts.Description))
+			err := executeVolumeInit(args[0], volumeInitOpts.Description)
+			if err != nil {
+				return err
+			}
+			logger.Log(knoxite.Info, "Initialized volume")
+
+			return nil
 		},
 	}
 	volumeListCmd = &cobra.Command{
@@ -61,45 +69,79 @@ func init() {
 }
 
 func executeVolumeInit(name, description string) error {
-	// acquire a shutdown lock. we don't want these next calls to be interrupted
+	// we don't want these next calls to be interrupted
+	logger.Log(knoxite.Info, "Acquiring shutdown lock")
 	lock := shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
+	logger.Log(knoxite.Info, "Acquired and locked shutdown lock")
+
 	defer lock()
+	defer logger.Log(knoxite.Info, "Shutdown lock released")
 
-	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
-	if err == nil {
-		vol, verr := knoxite.NewVolume(name, description)
-		if verr == nil {
-			verr = repository.AddVolume(vol)
-			if verr != nil {
-				return fmt.Errorf("Creating volume %s failed: %v", name, verr)
-			}
-
-			annotation := "Name: " + vol.Name
-			if len(vol.Description) > 0 {
-				annotation += ", Description: " + vol.Description
-			}
-			fmt.Printf("Volume %s (%s) created\n", vol.ID, annotation)
-			return repository.Save()
-		}
-	}
-	return err
-}
-
-func executeVolumeList() error {
+	logger.Log(knoxite.Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Opened repository")
 
+	logger.Log(knoxite.Info, fmt.Sprintf("Creating volume %s", description))
+	vol, verr := knoxite.NewVolume(name, description)
+	if verr != nil {
+		return verr
+	}
+	logger.Log(knoxite.Info, fmt.Sprintf("Created volume %s", vol.ID))
+
+	logger.Log(knoxite.Info, fmt.Sprintf("Adding volume %s to repository", vol.ID))
+	verr = repository.AddVolume(vol)
+	if verr != nil {
+		return fmt.Errorf("Creating volume %s failed: %v", name, verr)
+	}
+	logger.Log(knoxite.Info, "Added volume to repository")
+
+	annotation := "Name: " + vol.Name
+	if len(vol.Description) > 0 {
+		annotation += ", Description: " + vol.Description
+	}
+	fmt.Printf("Volume %s (%s) created\n", vol.ID, annotation)
+
+	logger.Log(knoxite.Info, "Saving repository")
+	err = repository.Save()
+	if err != nil {
+		return err
+	}
+	logger.Log(knoxite.Info, "Saved repository")
+	logger.Log(knoxite.Info, "Volume init command finished successfully")
+
+	return nil
+}
+
+func executeVolumeList() error {
+	logger.Log(knoxite.Info, "Opening repository")
+	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
+	if err != nil {
+		return err
+	}
+	logger.Log(knoxite.Info, "Opened repository")
+
+	logger.Log(knoxite.Info, "Initialising new gotable for output")
 	tab := gotable.NewTable([]string{"ID", "Name", "Description"},
 		[]int64{-8, -32, -48}, "No volumes found. This repository is empty.")
+
+	logger.Log(knoxite.Info, "Iterating volumes to print details")
 	for _, volume := range repository.Volumes {
 		tab.AppendRow([]interface{}{volume.ID, volume.Name, volume.Description})
 	}
 
-	_ = tab.Print()
+	logger.Log(knoxite.Info, "Printing volume list output")
+	err = tab.Print()
+	if err != nil {
+		return err
+	}
+	logger.Log(knoxite.Info, "Printed volume list output")
+	logger.Log(knoxite.Info, "Volume list command finished successfully")
+
 	return nil
 }
