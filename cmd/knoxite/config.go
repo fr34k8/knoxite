@@ -189,7 +189,7 @@ func executeConfigInfo() error {
 		[]int64{-15, -35, -15, -15, 15},
 		"No repository configurations found.")
 
-	logger.Log(knoxite.Info, "Iterating repositories to print details")
+	logger.Log(knoxite.Info, "Iterating over repositories to print details")
 	for alias, repo := range cfg.Repositories {
 		tab.AppendRow([]interface{}{
 			alias,

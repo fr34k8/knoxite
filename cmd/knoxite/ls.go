@@ -61,7 +61,7 @@ func executeLs(snapshotID string) error {
 	}
 	logger.Log(knoxite.Info, "Found snapshot "+snapshot.Description)
 
-	logger.Log(knoxite.Info, "Iterating archives to print details")
+	logger.Log(knoxite.Info, "Iterating over archives to print details")
 	for _, archive := range snapshot.Archives {
 		username := strconv.FormatInt(int64(archive.UID), 10)
 

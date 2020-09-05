@@ -130,7 +130,7 @@ func executeVolumeList() error {
 	tab := gotable.NewTable([]string{"ID", "Name", "Description"},
 		[]int64{-8, -32, -48}, "No volumes found. This repository is empty.")
 
-	logger.Log(knoxite.Info, "Iterating volumes to print details")
+	logger.Log(knoxite.Info, "Iterating over volumes to print details")
 	for _, volume := range repository.Volumes {
 		tab.AppendRow([]interface{}{volume.ID, volume.Name, volume.Description})
 	}
