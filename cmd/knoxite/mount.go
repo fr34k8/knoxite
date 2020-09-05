@@ -206,6 +206,7 @@ func updateIndex(repository *knoxite.Repository, snapshot *knoxite.Snapshot) {
 		fmt.Println("Adding to index:", path)
 		node(path, *arc, repository)
 	}
+	logger.Log(knoxite.Info, "Update index command finished successfully")
 }
 
 // Attr returns this node's filesystem attributes.
@@ -269,6 +270,8 @@ func (node *Node) Open(_ context.Context, req *fuse.OpenRequest, resp *fuse.Open
 		logger.Log(knoxite.Info, "Opened file")
 	}
 	resp.Flags |= fuse.OpenKeepCache
+	logger.Log(knoxite.Info, "Open node command finished successfully")
+
 	return node, nil
 }
 
@@ -285,12 +288,14 @@ func (node *Node) Read(_ context.Context, req *fuse.ReadRequest, resp *fuse.Read
 		logger.Log(knoxite.Info, "Read archive")
 		resp.Data = *d
 	}
+	logger.Log(knoxite.Info, "Read node command finished successfully")
 
 	return nil
 }
 
 // Readlink returns the target a symlink is pointing to.
 func (node *Node) Readlink(_ context.Context, _ *fuse.ReadlinkRequest) (string, error) {
+	logger.Log(knoxite.Info, "Readlink command finished successfully")
 	return node.Archive.PointsTo, nil
 }
 
