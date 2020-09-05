@@ -39,12 +39,14 @@ var (
 )
 
 func init() {
+	logger.Log(Info, "Init store flags")
 	initStoreFlags(cloneCmd.Flags)
 	RootCmd.AddCommand(cloneCmd)
 }
 
 func executeClone(snapshotID string, args []string, opts StoreOptions) error {
 	targets := []string{}
+	logger.Log(Info, "Collecting targets")
 	for _, target := range args {
 		if absTarget, err := filepath.Abs(target); err == nil {
 			target = absTarget
@@ -53,52 +55,89 @@ func executeClone(snapshotID string, args []string, opts StoreOptions) error {
 	}
 
 	// acquire a shutdown lock. we don't want these next calls to be interrupted
+	logger.Log(Info, "Acquiring shutdown lock")
 	lock := shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
+	logger.Log(Info, "Acquired and locked shutdown lock")
+
+	logger.Log(Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, "Opened repository")
+
+	logger.Log(Info, fmt.Sprintf("Finding snapshot %s", snapshotID))
 	volume, s, err := repository.FindSnapshot(snapshotID)
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, fmt.Sprintf("Found snapshot %s", s.Description))
+
+	logger.Log(Info, "Cloning snapshot")
 	snapshot, err := s.Clone()
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, fmt.Sprintf("Cloned snapshot. New snapshot: ID: %s, "+
+		"Description: %s.", snapshot.ID, snapshot.Description))
+
+	logger.Log(Info, "Opening chunk index")
 	chunkIndex, err := knoxite.OpenChunkIndex(&repository)
 	if err != nil {
 		return err
 	}
-	// release the shutdown lock
-	lock()
+	logger.Log(Info, "Opened chunk index")
 
+	lock()
+	logger.Log(Info, "Released shutdown lock")
+
+	logger.Log(Info, fmt.Sprintf("Storing cloned snapshot %s", snapshot.ID))
 	err = store(&repository, &chunkIndex, snapshot, targets, opts)
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, fmt.Sprintf("Stored clone %s of snapshot %s", snapshot.ID, s.ID))
 
-	// acquire another shutdown lock. we don't want these next calls to be interrupted
+	// we don't want these next calls to be interrupted
+	logger.Log(Info, "Acquiring shutdown lock")
 	lock = shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
-	defer lock()
+	logger.Log(Info, "Acquired and locked shutdown lock")
 
+	defer lock()
+	defer logger.Log(Info, "Shutdown lock released")
+
+	logger.Log(Info, fmt.Sprintf("Saving snapshot %s", snapshot.ID))
 	err = snapshot.Save(&repository)
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, "Saved snapshot")
+
+	logger.Log(Info, fmt.Sprintf("Adding snapshot to volume %s", volume.ID))
 	err = volume.AddSnapshot(snapshot.ID)
 	if err != nil {
 		return err
 	}
+	logger.Log(Info, "Added snapshot to volume")
+
+	logger.Log(Info, "Saving chunk index")
 	err = chunkIndex.Save(&repository)
 	if err != nil {
 		return err
 	}
-	return repository.Save()
+	logger.Log(Info, "Saved chunk index")
+
+	logger.Log(Info, "Saving repository")
+	err = repository.Save()
+	if err != nil {
+		return err
+	}
+	logger.Log(Info, "Saved repository \nClone command finished successfully")
+	return nil
 }
