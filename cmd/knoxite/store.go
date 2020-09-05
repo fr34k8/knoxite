@@ -95,20 +95,27 @@ func init() {
 
 func store(repository *knoxite.Repository, chunkIndex *knoxite.ChunkIndex, snapshot *knoxite.Snapshot, targets []string, opts StoreOptions) error {
 	// we want to be notified during the first phase of a shutdown
+	logger.Log(knoxite.Info, "Acquiring shutdown notifier")
 	cancel := shutdown.First()
 
+	logger.Log(knoxite.Info, "Getting rooted path name corresponding to the current directory")
 	wd, gerr := os.Getwd()
 	if gerr != nil {
 		return gerr
 	}
+	logger.Log(knoxite.Info, fmt.Sprintf("Rooted path: %s", wd))
 
 	if len(repository.BackendManager().Backends)-int(opts.FailureTolerance) <= 0 {
 		return ErrRedundancyAmount
 	}
+
+	logger.Log(knoxite.Info, "Get compression type from options")
 	compression, err := utils.CompressionTypeFromString(opts.Compression)
 	if err != nil {
 		return err
 	}
+
+	logger.Log(knoxite.Info, "Get encryption type from options")
 	encryption, err := utils.EncryptionTypeFromString(opts.Encryption)
 	if err != nil {
 		return err
@@ -117,10 +124,13 @@ func store(repository *knoxite.Repository, chunkIndex *knoxite.ChunkIndex, snaps
 	tol := uint(len(repository.BackendManager().Backends) - int(opts.FailureTolerance))
 
 	startTime := time.Now()
+
+	logger.Log(knoxite.Info, "Adding snapshot and getting progress")
 	progress := snapshot.Add(wd, targets, opts.Excludes, *repository, chunkIndex,
 		compression, encryption,
 		tol, opts.FailureTolerance)
 
+	logger.Log(knoxite.Info, "Initialising new goprogressbar for output")
 	fileProgressBar := &goprogressbar.ProgressBar{Width: 40}
 	overallProgressBar := &goprogressbar.ProgressBar{
 		Text:  fmt.Sprintf("%d of %d total", 0, 0),
@@ -134,12 +144,16 @@ func store(repository *knoxite.Repository, chunkIndex *knoxite.ChunkIndex, snaps
 	pb := goprogressbar.MultiProgressBar{}
 	pb.AddProgressBar(fileProgressBar)
 	pb.AddProgressBar(overallProgressBar)
-	lastPath := ""
 
+	lastPath := ""
 	items := int64(1)
+
+	logger.Log(knoxite.Info, "Iterating over progress to print details")
 	for p := range progress {
 		select {
 		case n := <-cancel:
+			logger.Log(knoxite.Info, "Operation got cancelled. Aborting.")
+
 			fmt.Println("Aborting...")
 			close(n)
 			return nil
@@ -172,70 +186,113 @@ func store(repository *knoxite.Repository, chunkIndex *knoxite.ChunkIndex, snaps
 				fileProgressBar.Text = p.Path
 			}
 
+			logger.Log(knoxite.Debug, "Printing progressbar")
 			pb.LazyPrint()
 		}
 	}
 
 	fmt.Printf("\nSnapshot %s created: %s\n", snapshot.ID, snapshot.Stats.String())
+	logger.Log(knoxite.Info, "Store finished successfully")
+
 	return nil
 }
 
 func executeStore(volumeID string, args []string, opts StoreOptions) error {
 	targets := []string{}
+
+	logger.Log(knoxite.Info, "Collecting targets")
 	for _, target := range args {
 		if absTarget, err := filepath.Abs(target); err == nil {
 			target = absTarget
 		}
 		targets = append(targets, target)
+		logger.Log(knoxite.Info, "Collected targets")
 	}
 
-	// acquire a shutdown lock. we don't want these next calls to be interrupted
+	// we don't want these next calls to be interrupted
+	logger.Log(knoxite.Info, "Acquiring shutdown lock")
 	lock := shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
+	logger.Log(knoxite.Info, "Acquired and locked shutdown lock")
+
+	logger.Log(knoxite.Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Opened repository")
+
+	logger.Log(knoxite.Info, fmt.Sprintf("Finding volume %s", volumeID))
 	volume, err := repository.FindVolume(volumeID)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Found volume")
+
+	logger.Log(knoxite.Info, fmt.Sprintf("Creating new snapshot: %s", opts.Description))
 	snapshot, err := knoxite.NewSnapshot(opts.Description)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Created snapshot")
+
+	logger.Log(knoxite.Info, "Opening chunk index")
 	chunkIndex, err := knoxite.OpenChunkIndex(&repository)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Opened chunk index")
+
 	// release the shutdown lock
 	lock()
+	logger.Log(knoxite.Info, "Shutdown lock released")
 
+	logger.Log(knoxite.Info, fmt.Sprintf("Storing snapshot %s", snapshot.ID))
 	err = store(&repository, &chunkIndex, snapshot, targets, opts)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Stored snapshot")
 
-	// acquire another shutdown lock. we don't want these next calls to be interrupted
+	// we don't want these next calls to be interrupted
+	logger.Log(knoxite.Info, "Acquiring another shutdown lock")
 	lock = shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
 	defer lock()
+	defer logger.Log(knoxite.Info, "Shutdown lock released")
 
+	logger.Log(knoxite.Info, "Saving snapshot")
 	err = snapshot.Save(&repository)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Saved snapshot")
+
+	logger.Log(knoxite.Info, fmt.Sprintf("Adding snapshot to volume %s", volume.ID))
 	err = volume.AddSnapshot(snapshot.ID)
 	if err != nil {
 		return err
 	}
+	logger.Log(knoxite.Info, "Added snapshot to volume")
+
+	logger.Log(knoxite.Info, "Saving chunk index")
 	err = chunkIndex.Save(&repository)
 	if err != nil {
 		return err
 	}
-	return repository.Save()
+	logger.Log(knoxite.Info, "Saved chunk index")
+
+	logger.Log(knoxite.Info, "Saving repository")
+	err = repository.Save()
+	if err != nil {
+		return err
+	}
+	logger.Log(knoxite.Info, "Saved repository")
+	logger.Log(knoxite.Info, "Store command finished successfully")
+
+	return nil
 }
