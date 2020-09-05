@@ -188,3 +188,17 @@ func PathToUrl(u string) (*url.URL, error) {
 	url.Path, _ = homedir.Expand(url.Path)
 	return url, nil
 }
+
+// VerbosityTypeFromString returns the verbosity type from a user-specified string.
+func VerbosityTypeFromString(s string) int {
+	switch strings.ToLower(s) {
+	case "warning":
+		return knoxite.Warning
+	case "info":
+		return knoxite.Info
+	case "debug":
+		return knoxite.Debug
+	default:
+		return knoxite.Warning
+	}
+}

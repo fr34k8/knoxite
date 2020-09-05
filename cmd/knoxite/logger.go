@@ -7,19 +7,11 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
 
-type Verbosity int
-
-const (
-	Debug = iota
-	Info
-	Warning
+	"github.com/knoxite/knoxite"
 )
-
-func (v Verbosity) String() string {
-	return [...]string{"Debug", "Info", "Warning", "Error"}[v]
-}
 
 type Logger struct {
 	VerbosityLevel int
@@ -27,20 +19,26 @@ type Logger struct {
 
 var (
 	logger Logger
-	printV = func(verbosity Verbosity, s string) {
+	printV = func(verbosity knoxite.Verbosity, s string) {
 		fmt.Println(verbosity.String() + ": " + s)
 	}
 )
 
-func (l Logger) Log(verbosity Verbosity, s string) {
-	switch l.VerbosityLevel {
-	case Warning:
-		printV(verbosity, s)
+func (l *Logger) Log(verbosity knoxite.Verbosity, s string) {
+	switch verbosity {
+	case knoxite.Debug:
+		if l.VerbosityLevel == knoxite.Debug {
+			printV(verbosity, s)
+		}
 		fallthrough
-	case Info:
-		printV(verbosity, s)
+	case knoxite.Info:
+		if l.VerbosityLevel == knoxite.Info {
+			printV(verbosity, s)
+		}
 		fallthrough
-	case Debug:
-		printV(verbosity, s)
+	case knoxite.Warning:
+		if l.VerbosityLevel == knoxite.Warning {
+			printV(verbosity, s)
+		}
 	}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/knoxite/knoxite/cmd/knoxite/config"
+	"github.com/knoxite/knoxite/cmd/knoxite/utils"
 	_ "github.com/knoxite/knoxite/storage/azure"
 	_ "github.com/knoxite/knoxite/storage/backblaze"
 	_ "github.com/knoxite/knoxite/storage/dropbox"
@@ -36,7 +37,7 @@ type GlobalOptions struct {
 	Repo      string
 	Password  string
 	ConfigURL string
-	Verbose   bool
+	Verbosity string
 }
 
 var (
@@ -66,7 +67,7 @@ func main() {
 	RootCmd.PersistentFlags().StringVarP(&globalOpts.Repo, "repo", "r", "", "Repository directory to backup to/restore from (default: current working dir)")
 	RootCmd.PersistentFlags().StringVarP(&globalOpts.Password, "password", "p", "", "Password to use for data encryption")
 	RootCmd.PersistentFlags().StringVarP(&globalOpts.ConfigURL, "configURL", "C", config.DefaultPath(), "Path to the configuration file")
-	RootCmd.PersistentFlags().BoolVarP(&globalOpts.Verbose, "verbose", "v", false, "Verbose output")
+	RootCmd.PersistentFlags().StringVarP(&globalOpts.Verbosity, "verbose", "v", "Warning", "Verbose output")
 
 	globalOpts.Repo = os.Getenv("KNOXITE_REPOSITORY")
 	globalOpts.Password = os.Getenv("KNOXITE_PASSWORD")
@@ -79,6 +80,7 @@ func main() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initLogger)
 	if CommitSHA != "" {
 		vt := RootCmd.VersionTemplate()
 		RootCmd.SetVersionTemplate(vt[:len(vt)-1] + " (" + CommitSHA + ")\n")
@@ -88,6 +90,10 @@ func init() {
 	}
 
 	RootCmd.Version = Version
+}
+
+func initLogger() {
+	logger.VerbosityLevel = utils.VerbosityTypeFromString(globalOpts.Verbosity)
 }
 
 // initConfig initializes the configuration for knoxite.

@@ -39,14 +39,14 @@ var (
 )
 
 func init() {
-	logger.Log(Info, "Init store flags")
+	logger.Log(knoxite.Info, "Init store flags")
 	initStoreFlags(cloneCmd.Flags)
 	RootCmd.AddCommand(cloneCmd)
 }
 
 func executeClone(snapshotID string, args []string, opts StoreOptions) error {
 	targets := []string{}
-	logger.Log(Info, "Collecting targets")
+	logger.Log(knoxite.Info, "Collecting targets")
 	for _, target := range args {
 		if absTarget, err := filepath.Abs(target); err == nil {
 			target = absTarget
@@ -55,89 +55,90 @@ func executeClone(snapshotID string, args []string, opts StoreOptions) error {
 	}
 
 	// acquire a shutdown lock. we don't want these next calls to be interrupted
-	logger.Log(Info, "Acquiring shutdown lock")
+	logger.Log(knoxite.Info, "Acquiring shutdown lock")
 	lock := shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
-	logger.Log(Info, "Acquired and locked shutdown lock")
+	logger.Log(knoxite.Info, "Acquired and locked shutdown lock")
 
-	logger.Log(Info, "Opening repository")
+	logger.Log(knoxite.Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, "Opened repository")
+	logger.Log(knoxite.Info, "Opened repository")
 
-	logger.Log(Info, fmt.Sprintf("Finding snapshot %s", snapshotID))
+	logger.Log(knoxite.Info, fmt.Sprintf("Finding snapshot %s", snapshotID))
 	volume, s, err := repository.FindSnapshot(snapshotID)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, fmt.Sprintf("Found snapshot %s", s.Description))
+	logger.Log(knoxite.Info, fmt.Sprintf("Found snapshot %s", s.Description))
 
-	logger.Log(Info, "Cloning snapshot")
+	logger.Log(knoxite.Info, "Cloning snapshot")
 	snapshot, err := s.Clone()
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, fmt.Sprintf("Cloned snapshot. New snapshot: ID: %s, "+
+	logger.Log(knoxite.Info, fmt.Sprintf("Cloned snapshot. New snapshot: ID: %s, "+
 		"Description: %s.", snapshot.ID, snapshot.Description))
 
-	logger.Log(Info, "Opening chunk index")
+	logger.Log(knoxite.Info, "Opening chunk index")
 	chunkIndex, err := knoxite.OpenChunkIndex(&repository)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, "Opened chunk index")
+	logger.Log(knoxite.Info, "Opened chunk index")
 
 	lock()
-	logger.Log(Info, "Released shutdown lock")
+	logger.Log(knoxite.Info, "Released shutdown lock")
 
-	logger.Log(Info, fmt.Sprintf("Storing cloned snapshot %s", snapshot.ID))
+	logger.Log(knoxite.Info, fmt.Sprintf("Storing cloned snapshot %s", snapshot.ID))
 	err = store(&repository, &chunkIndex, snapshot, targets, opts)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, fmt.Sprintf("Stored clone %s of snapshot %s", snapshot.ID, s.ID))
+	logger.Log(knoxite.Info, fmt.Sprintf("Stored clone %s of snapshot %s", snapshot.ID, s.ID))
 
 	// we don't want these next calls to be interrupted
-	logger.Log(Info, "Acquiring shutdown lock")
+	logger.Log(knoxite.Info, "Acquiring shutdown lock")
 	lock = shutdown.Lock()
 	if lock == nil {
 		return nil
 	}
-	logger.Log(Info, "Acquired and locked shutdown lock")
+	logger.Log(knoxite.Info, "Acquired and locked shutdown lock")
 
 	defer lock()
-	defer logger.Log(Info, "Shutdown lock released")
+	defer logger.Log(knoxite.Info, "Shutdown lock released")
 
-	logger.Log(Info, fmt.Sprintf("Saving snapshot %s", snapshot.ID))
+	logger.Log(knoxite.Info, fmt.Sprintf("Saving snapshot %s", snapshot.ID))
 	err = snapshot.Save(&repository)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, "Saved snapshot")
+	logger.Log(knoxite.Info, "Saved snapshot")
 
-	logger.Log(Info, fmt.Sprintf("Adding snapshot to volume %s", volume.ID))
+	logger.Log(knoxite.Info, fmt.Sprintf("Adding snapshot to volume %s", volume.ID))
 	err = volume.AddSnapshot(snapshot.ID)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, "Added snapshot to volume")
+	logger.Log(knoxite.Info, "Added snapshot to volume")
 
-	logger.Log(Info, "Saving chunk index")
+	logger.Log(knoxite.Info, "Saving chunk index")
 	err = chunkIndex.Save(&repository)
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, "Saved chunk index")
+	logger.Log(knoxite.Info, "Saved chunk index")
 
-	logger.Log(Info, "Saving repository")
+	logger.Log(knoxite.Info, "Saving repository")
 	err = repository.Save()
 	if err != nil {
 		return err
 	}
-	logger.Log(Info, "Saved repository \nClone command finished successfully")
+	logger.Log(knoxite.Info, "Saved repository")
+	logger.Log(knoxite.Info, "Clone command finished successfully")
 	return nil
 }
