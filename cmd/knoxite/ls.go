@@ -30,6 +30,8 @@ var (
 			if len(args) != 1 {
 				return fmt.Errorf("ls needs a snapshot ID")
 			}
+
+			logger.Log(knoxite.Info, "Execute ls command")
 			return executeLs(args[0])
 		},
 	}
@@ -40,35 +42,53 @@ func init() {
 }
 
 func executeLs(snapshotID string) error {
+	logger.Log(knoxite.Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
-	if err == nil {
-		tab := gotable.NewTable([]string{"Perms", "User", "Group", "Size", "ModTime", "Name"},
-			[]int64{-10, -8, -5, 12, -19, -48},
-			"No files found.")
+	if err != nil {
+		return err
+	}
+	logger.Log(knoxite.Info, "Opened repository")
 
-		_, snapshot, ferr := repository.FindSnapshot(snapshotID)
-		if ferr != nil {
-			return ferr
+	logger.Log(knoxite.Info, "Initialising new gotable for output")
+	tab := gotable.NewTable([]string{"Perms", "User", "Group", "Size", "ModTime", "Name"},
+		[]int64{-10, -8, -5, 12, -19, -48},
+		"No files found.")
+
+	logger.Log(knoxite.Info, "Finding snapshot "+snapshotID)
+	_, snapshot, ferr := repository.FindSnapshot(snapshotID)
+	if ferr != nil {
+		return ferr
+	}
+	logger.Log(knoxite.Info, "Found snapshot "+snapshot.Description)
+
+	logger.Log(knoxite.Info, "Iterating archives to print details")
+	for _, archive := range snapshot.Archives {
+		username := strconv.FormatInt(int64(archive.UID), 10)
+
+		logger.Log(knoxite.Info, fmt.Sprintf("Looking up OS username with archive's UID %d", archive.UID))
+		u, uerr := user.LookupId(username)
+		if uerr != nil {
+			logger.Log(knoxite.Warning, "Looking up username failed. Using default value.")
 		}
+		username = u.Username
 
-		for _, archive := range snapshot.Archives {
-			username := strconv.FormatInt(int64(archive.UID), 10)
-			u, uerr := user.LookupId(username)
-			if uerr == nil {
-				username = u.Username
-			}
-			groupname := strconv.FormatInt(int64(archive.GID), 10)
-			tab.AppendRow([]interface{}{
-				archive.Mode,
-				username,
-				groupname,
-				knoxite.SizeToString(archive.Size),
-				time.Unix(archive.ModTime, 0).Format(timeFormat),
-				archive.Path})
-		}
-
-		_ = tab.Print()
+		groupname := strconv.FormatInt(int64(archive.GID), 10)
+		tab.AppendRow([]interface{}{
+			archive.Mode,
+			username,
+			groupname,
+			knoxite.SizeToString(archive.Size),
+			time.Unix(archive.ModTime, 0).Format(timeFormat),
+			archive.Path})
 	}
 
-	return err
+	logger.Log(knoxite.Info, "Printing ls output")
+	err = tab.Print()
+	if err != nil {
+		return err
+	}
+	logger.Log(knoxite.Info, "Printed ls output")
+	logger.Log(knoxite.Info, "ls command finished successfully")
+
+	return nil
 }
