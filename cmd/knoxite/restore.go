@@ -70,54 +70,64 @@ func init() {
 }
 
 func executeRestore(snapshotID, target string, opts RestoreOptions) error {
+	logger.Log(knoxite.Info, "Opening repository")
 	repository, err := openRepository(globalOpts.Repo, globalOpts.Password)
-	if err == nil {
-		_, snapshot, ferr := repository.FindSnapshot(snapshotID)
-		if ferr != nil {
-			return ferr
-		}
-
-		progress, derr := knoxite.DecodeSnapshot(repository, snapshot, target, opts.Excludes)
-		if derr != nil {
-			return derr
-		}
-
-		pb := &goprogressbar.ProgressBar{Total: 1000, Width: 40}
-		stats := knoxite.Stats{}
-		lastPath := ""
-
-		for p := range progress {
-			if p.Error != nil {
-				fmt.Println()
-				return p.Error
-			}
-
-			pb.Total = int64(p.CurrentItemStats.Size)
-			pb.Current = int64(p.CurrentItemStats.Transferred)
-			pb.PrependText = fmt.Sprintf("%s / %s  %s/s",
-				knoxite.SizeToString(uint64(pb.Current)),
-				knoxite.SizeToString(uint64(pb.Total)),
-				knoxite.SizeToString(p.TransferSpeed()))
-
-			if p.Path != lastPath {
-				// We have just started restoring a new item
-				if len(lastPath) > 0 {
-					fmt.Println()
-				}
-				lastPath = p.Path
-				pb.Text = p.Path
-			}
-			if p.CurrentItemStats.Size == p.CurrentItemStats.Transferred {
-				// We have just finished restoring an item
-				stats.Add(p.TotalStatistics)
-			}
-
-			pb.LazyPrint()
-		}
-		fmt.Println()
-		fmt.Println("Restore done:", stats.String())
-		return nil
+	if err != nil {
+		return err
 	}
+	logger.Log(knoxite.Info, "Opened repository")
 
-	return err
+	logger.Log(knoxite.Info, fmt.Sprintf("Finding snapshot %s", snapshotID))
+	_, snapshot, ferr := repository.FindSnapshot(snapshotID)
+	if ferr != nil {
+		return ferr
+	}
+	logger.Log(knoxite.Info, fmt.Sprintf("Found snapshot %s", snapshot.Description))
+
+	logger.Log(knoxite.Info, fmt.Sprintf("Decoding snapshot %s", snapshot.ID))
+	progress, derr := knoxite.DecodeSnapshot(repository, snapshot, target, opts.Excludes)
+	if derr != nil {
+		return derr
+	}
+	logger.Log(knoxite.Info, "Decoded snapshot")
+
+	logger.Log(knoxite.Info, "Initialising new goprogressbar for output")
+	pb := &goprogressbar.ProgressBar{Total: 1000, Width: 40}
+	stats := knoxite.Stats{}
+	lastPath := ""
+
+	logger.Log(knoxite.Info, "Iterating over progress to print details")
+	for p := range progress {
+		if p.Error != nil {
+			fmt.Println()
+			return p.Error
+		}
+
+		pb.Total = int64(p.CurrentItemStats.Size)
+		pb.Current = int64(p.CurrentItemStats.Transferred)
+		pb.PrependText = fmt.Sprintf("%s / %s  %s/s",
+			knoxite.SizeToString(uint64(pb.Current)),
+			knoxite.SizeToString(uint64(pb.Total)),
+			knoxite.SizeToString(p.TransferSpeed()))
+
+		if p.Path != lastPath {
+			// We have just started restoring a new item
+			if len(lastPath) > 0 {
+				fmt.Println()
+			}
+			lastPath = p.Path
+			pb.Text = p.Path
+		}
+		if p.CurrentItemStats.Size == p.CurrentItemStats.Transferred {
+			// We have just finished restoring an item
+			stats.Add(p.TotalStatistics)
+		}
+		logger.Log(knoxite.Debug, "Printing restore command output")
+		pb.LazyPrint()
+	}
+	fmt.Println()
+	fmt.Println("Restore done:", stats.String())
+
+	logger.Log(knoxite.Info, "Restore command finished successfully")
+	return nil
 }

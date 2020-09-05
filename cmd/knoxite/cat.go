@@ -42,16 +42,16 @@ func executeCat(snapshotID string, file string) error {
 	}
 	logger.Log(knoxite.Info, "Opened repository")
 
-	logger.Log(knoxite.Info, "Finding snapshot "+snapshotID)
+	logger.Log(knoxite.Info, fmt.Sprintf("Finding snapshot %s", snapshotID))
 	_, snapshot, ferr := repository.FindSnapshot(snapshotID)
 	if ferr != nil {
 		return ferr
 	}
-	logger.Log(knoxite.Info, "Found snapshot "+snapshot.Description)
+	logger.Log(knoxite.Info, fmt.Sprintf("Found snapshot %s", snapshot.Description))
 
-	logger.Log(knoxite.Info, "Reading snapshot "+snapshotID)
+	logger.Log(knoxite.Info, fmt.Sprintf("Reading snapshot %s", snapshotID))
 	if archive, ok := snapshot.Archives[file]; ok {
-		logger.Log(knoxite.Info, "Found and read archive from location "+archive.Path)
+		logger.Log(knoxite.Info, fmt.Sprintf("Found and read archive from location %s", archive.Path))
 
 		logger.Log(knoxite.Info, "Decoding archive data")
 		b, _, erra := knoxite.DecodeArchiveData(repository, *archive)

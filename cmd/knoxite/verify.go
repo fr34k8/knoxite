@@ -91,13 +91,12 @@ func executeVerifyRepo(opts VerifyOptions) error {
 			lastPath = p.Path
 			pb.Text = p.Path
 		}
-
+		logger.Log(knoxite.Debug, "Printing verify repo output")
 		pb.LazyPrint()
 	}
 	fmt.Println()
 	fmt.Printf("Verify done: %d errors\n", len(errors))
 
-	logger.Log(knoxite.Info, "Printing verify repo output")
 	logger.Log(knoxite.Info, "Verify repo command finished successfully")
 	return nil
 }
@@ -145,13 +144,12 @@ func executeVerifyVolume(volumeId string, opts VerifyOptions) error {
 			lastPath = p.Path
 			pb.Text = p.Path
 		}
-
+		logger.Log(knoxite.Debug, "Printing verify volume output")
 		pb.LazyPrint()
 	}
 	fmt.Println()
 	fmt.Printf("Verify done: %d errors\n", len(errors))
 
-	logger.Log(knoxite.Info, "Printing verify volume output")
 	logger.Log(knoxite.Info, "Verify volume command finished successfully")
 	return nil
 }
@@ -199,14 +197,13 @@ func executeVerifySnapshot(volumeId string, snapshotId string, opts VerifyOption
 			lastPath = p.Path
 			pb.Text = p.Path
 		}
-
+		logger.Log(knoxite.Debug, "Printing verify snapshot output")
 		pb.LazyPrint()
 	}
 
 	fmt.Println()
 	fmt.Printf("Verify done: %d errors\n", len(errors))
 
-	logger.Log(knoxite.Info, "Printing verify snapshot output")
 	logger.Log(knoxite.Info, "Verify snapshot command finished successfully")
 	return nil
 }
